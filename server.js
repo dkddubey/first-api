@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");       // <-- THIS IS REQUIRED
+const archiver = require("archiver");
 
 const app = express();
 
@@ -57,4 +59,39 @@ app.use((err, req, res, next) => {
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);
+});
+
+// ----------- DOWNLOAD ALL & CLEAN -----------
+app.get("/download-all", (req, res) => {
+  const uploadsDir = path.join(__dirname, "uploads");
+
+  // Check if folder exists or has files
+  fs.readdir(uploadsDir, (err, files) => {
+    if (err) return res.status(500).json({ error: "Cannot read uploads folder" });
+    if (files.length === 0) return res.status(404).json({ error: "No files to download" });
+
+    // Set headers for zip download
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", "attachment; filename=all_uploads.zip");
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.pipe(res);
+
+    // Add all files to archive
+    files.forEach(file => {
+      archive.file(path.join(uploadsDir, file), { name: file });
+    });
+
+    archive.finalize();
+
+    // After sending zip, clean uploads folder
+    archive.on("end", () => {
+      files.forEach(file => {
+        fs.unlink(path.join(uploadsDir, file), err => {
+          if (err) console.error("Failed to delete file:", file);
+        });
+      });
+      console.log("All files sent and uploads folder cleaned");
+    });
+  });
 });
