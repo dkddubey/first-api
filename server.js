@@ -15,13 +15,13 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueName =
       Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
+    cb(null, uniqueName + "_" + file.originalname);
   },
 });
 
 // Allow only .txt files
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === "text/plain") {
+  if (file.mimetype === "text/csv") {
     cb(null, true);
   } else {
     cb(new Error("Only .txt files are allowed"), false);
